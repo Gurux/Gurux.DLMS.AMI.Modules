@@ -1,0 +1,50 @@
+<Project>
+  <PropertyGroup>
+    <AmiModuleArchiveDirectory Condition="'$(AmiModuleArchiveDirectory)' == ''">$(MSBuildProjectDirectory)/bin/$(Configuration)/</AmiModuleArchiveDirectory>
+    <_AmiModuleArchiveDirectory>$([MSBuild]::EnsureTrailingSlash('$(AmiModuleArchiveDirectory)'))</_AmiModuleArchiveDirectory>
+    <AmiModuleExcludeHostAssemblies Condition="'$(AmiModuleExcludeHostAssemblies)' == ''">true</AmiModuleExcludeHostAssemblies>
+  </PropertyGroup>
+
+  <!-- Build/development outputs keep CopyLocal dependencies. Only deployment files are filtered. -->
+  <Target Name="AmiResolveHostProvidedAssemblies" DependsOnTargets="ResolveReferences"
+          Condition="'$(AmiModuleExcludeHostAssemblies)' == 'true'">
+    <ItemGroup>
+      <!-- Gurux contracts are shared by PluginLoadContext. Framework assemblies are
+           supplied by the runtime. Keep other Microsoft/System NuGet dependencies:
+           the host may not supply them, so the module must carry its private copies. -->
+      <_AmiModuleHostAssembly Include="@(ReferencePath)"
+          Condition="'%(ReferencePath.Extension)' == '.dll' and ('%(ReferencePath.FrameworkReferenceName)' != '' or $([System.Text.RegularExpressions.Regex]::IsMatch('%(ReferencePath.Filename)', '(?i)^(netstandard|mscorlib|Gurux\.(DLMS\.AMI\.(Module|Shared|Services|Components)|Service(\.Common)?|UI\.Components))$')))" />
+      <_AmiModuleHostFile Include="@(_AmiModuleHostAssembly->'%(Filename).dll');@(_AmiModuleHostAssembly->'%(Filename).pdb');@(_AmiModuleHostAssembly->'%(Filename).xml');@(_AmiModuleHostAssembly->'%(Filename).resources.dll')" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="AmiFilterModulePublishFiles" AfterTargets="ComputeFilesToPublish"
+          DependsOnTargets="AmiResolveHostProvidedAssemblies" Condition="'$(AmiModuleExcludeHostAssemblies)' == 'true'">
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="@(_AmiModuleHostFile)" MatchOnMetadata="Filename;Extension" MatchOnMetadataOptions="CaseInsensitive" />
+    </ItemGroup>
+  </Target>
+
+  <!-- Publish doesn't delete old output files. Remove previously copied host files before ZIP creation. -->
+  <Target Name="AmiRemoveStaleHostPublishFiles" AfterTargets="Publish" BeforeTargets="ZipPublish"
+          DependsOnTargets="AmiResolveHostProvidedAssemblies" Condition="'$(AmiModuleExcludeHostAssemblies)' == 'true'">
+    <ItemGroup>
+      <_AmiExistingPublishFile Include="$(PublishDir)**/*.dll;$(PublishDir)**/*.pdb;$(PublishDir)**/*.xml" />
+      <_AmiPrivatePublishFile Include="@(_AmiExistingPublishFile)" />
+      <_AmiPrivatePublishFile Remove="@(_AmiModuleHostFile)" MatchOnMetadata="Filename;Extension" MatchOnMetadataOptions="CaseInsensitive" />
+      <_AmiStaleSharedPublishFile Include="@(_AmiExistingPublishFile)" Exclude="@(_AmiPrivatePublishFile)" />
+    </ItemGroup>
+    <Delete Files="@(_AmiStaleSharedPublishFile)" />
+  </Target>
+
+  <!-- Compatibility follows the actual published assembly graph, after host DLL filtering. -->
+  <Target Name="AmiWriteCompatibilityMetadata" BeforeTargets="ZipPublish"
+          DependsOnTargets="AmiRemoveStaleHostPublishFiles"
+          Condition="'$(AmiModuleCompatibilityMetadata)' == 'true'">
+    <PropertyGroup>
+      <_AmiMetadataPublishDirectory>$([MSBuild]::EnsureTrailingSlash('$(PublishDir)')).</_AmiMetadataPublishDirectory>
+    </PropertyGroup>
+    <Exec Command="dotnet run --project &quot;$(MSBuildThisFileDirectory)scripts/Gurux.AMI.Module.Metadata/Gurux.AMI.Module.Metadata.csproj&quot; --configuration Release -- &quot;$(_AmiMetadataPublishDirectory)&quot; &quot;$(PackageId)&quot; &quot;$(Version)&quot;" />
+  </Target>
+</Project>
+

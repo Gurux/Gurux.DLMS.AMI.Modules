@@ -1,0 +1,11 @@
+.svn/
+.vs/
+**/bin/
+**/obj/
+**/__pycache__/
+*.pyc
+*.user
+*.suo
+/release/
+/Development
+build.bat

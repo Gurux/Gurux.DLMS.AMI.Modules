@@ -1,0 +1,218 @@
+@*
+// --------------------------------------------------------------------------
+//  Gurux Ltd
+//
+//
+//
+// Filename:        $HeadURL$
+//
+// Version:         $Revision$,
+//                  $Date$
+//                  $Author$
+//
+// Copyright (c) Gurux Ltd
+//
+//---------------------------------------------------------------------------
+//
+//  DESCRIPTION
+//
+// This file is a part of Gurux Device Framework.
+//
+// Gurux Device Framework is Open Source software; you can redistribute it
+// and/or modify it under the terms of the GNU General Public License
+// as published by the Free Software Foundation; version 2 of the License.
+// Gurux Device Framework is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+// See the GNU General Public License for more details.
+//
+// This code is licensed under the GNU General Public License v2.
+// Full text may be retrieved at http://www.gnu.org/licenses/gpl-2.0.txt
+//---------------------------------------------------------------------------
+*@
+@page "/module/smtp/config"
+@using Microsoft.Extensions.DependencyInjection
+@using Gurux.UI.Components
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@using Gurux.DLMS.AMI.Module
+@using Gurux.DLMS.AMI.Shared
+@using Microsoft.Extensions.Logging
+@using System.Net.Mail
+@using Microsoft.Extensions.Options
+@using System.Net.Http.Json
+@using System.Text.Json
+@using System.Text
+
+@inject IServiceProvider Services
+@inject HttpClient Http
+@inject Gurux.UI.Components.IGXProgress Progress
+@inject ILogger<Configuration> Logger
+
+@inherits GXAMIModuleSettingsBase<SmtpOptions>
+@implements IDisposable
+
+@if (Settings != null)
+{
+    <EditForm Model="@Settings">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <div class="row">
+            <div style="width:100%">
+                <div class="form-group">
+                    <span>@Properties.Resources.SMTPServerAddress</span>
+                    <Microsoft.AspNetCore.Components.Forms.InputText id="host" @bind-Value="Settings.Host" class="form-control" />
+                    <ValidationMessage For="@(() => Settings.Host)" />
+                </div>
+                <div class="form-group">
+                    <span>@Properties.Resources.SMTPServerPort</span>
+                    <Microsoft.AspNetCore.Components.Forms.InputNumber id="port" @bind-Value="Settings.Port" class="form-control" />
+                    <ValidationMessage For="@(() => Settings.Port)" />
+                </div>
+                <div class="form-group">
+                    <label for="timeout"><LocalizedText Value="Timeout (seconds)" /></label>
+                    <Microsoft.AspNetCore.Components.Forms.InputNumber id="timeout" min="1" max="300" @bind-Value="Settings.TimeoutSeconds" />
+                    <ValidationMessage For="@(() => Settings.TimeoutSeconds)" />
+                </div>
+                <div class="form-group">
+                    <span>@Properties.Resources.Email</span>
+                    <Microsoft.AspNetCore.Components.Forms.InputText id="email" @bind-Value="Settings.Email" class="form-control" />
+                    <ValidationMessage For="@(() => Settings.Email)" />
+                </div>
+                <div class="form-group">
+                    <span>@Properties.Resources.Password</span>
+                    <Microsoft.AspNetCore.Components.Forms.InputText type="password" id="password" @bind-Value="InputPassword" class="form-control" />
+                    <ValidationMessage For="@(() => Settings.Password)" />
+                </div>
+                <div class="form-group">
+                    <Microsoft.AspNetCore.Components.Forms.InputCheckbox id="enableSsl" @bind-Value="Settings.EnableSsl" />
+                    <label for="enableSsl"><LocalizedText Value="Use TLS (STARTTLS)" /></label>
+                </div>
+                <hr />
+                <div class="form-group">
+                    <span>@Properties.Resources.TestEmail</span>
+                    <div class="d-flex align-items-center gap-2">
+                        <Microsoft.AspNetCore.Components.Forms.InputText id="testEmail" @bind-Value="TestEmailAddress" class="form-control" />
+                        <button type="button" class="btn btn-outline-primary flex-shrink-0" @onclick="SendTestEmailAsync" disabled="@_sending">
+                            <LocalizedText Value="@(_sending ? "Sending..." : "Send test email")" />
+                        </button>
+                    </div>
+                    @if (_testResult != null)
+                    {
+                        <div role="status" class="text-success"><LocalizedText Value="@_testResult" /></div>
+                    }
+                </div>
+            </div>
+        </div>
+    </EditForm>
+}
+
+@code {
+    private readonly CancellationTokenSource _lifetime = new();
+    public void Dispose() { _lifetime.Cancel(); _lifetime.Dispose(); }
+    private string? TestEmailAddress;
+    private string? _password;
+    private string? _serializedPassword;
+    private string? InputPassword
+    {
+        get => Settings.Password == _serializedPassword ? null : Settings.Password;
+        set => Settings.Password = value;
+    }
+    private bool _sending;
+    private IGXNotificationService? Notifications => Services.GetService<IGXNotificationService>();
+    private string? _testResult;
+
+    /// <summary>
+    /// Send test email.
+    /// </summary>
+    private async Task SendTestEmailAsync()
+    {
+        if (_sending)
+        {
+            return;
+        }
+        _sending = true;
+        _testResult = null;
+        Notifications?.RemoveByKey("Modules/SMTP/Test");
+        using var progressScope = Progress.ProgressStart(Properties.Resources.SendTestEmail);
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token, progressScope.CancellationToken);
+        try
+        {
+            Logger.LogInformation("Sending test email to {0}.", TestEmailAddress);
+            if (Settings.Port == 0)
+            {
+                throw new ArgumentException("Invalid port.");
+            }
+            if (string.IsNullOrEmpty(Settings.Host))
+            {
+                throw new ArgumentException("Invalid host address.");
+            }
+            if (string.IsNullOrEmpty(TestEmailAddress))
+            {
+                throw new Exception("Invalid email address.");
+            }
+            var msg = new SmtpTestMessage
+            {
+                Address = TestEmailAddress,
+                Options = new SmtpOptions
+                {
+                    Host = Settings.Host,
+                    Port = Settings.Port,
+                    TimeoutSeconds = Settings.TimeoutSeconds,
+                    EnableSsl = Settings.EnableSsl,
+                    Email = Settings.Email,
+                    Password = InputPassword
+                }
+            };
+            using var response = await Http.PostAsJsonAsync("api/extensions/Gurux.AMI.SMTP/test", msg, cancellation.Token);
+            await Helpers.ValidateStatusCode(response, cancellation.Token);
+            cancellation.Token.ThrowIfCancellationRequested();
+            _testResult = "Test email sent.";
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+            if (!_lifetime.IsCancellationRequested)
+            {
+                _testResult = "Test email cancelled.";
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error while sending test email.");
+            Notifications?.ReportError(ex, "Modules/SMTP/Test");
+        }
+        finally { _sending = false; }
+    }
+
+    /// <inheritdoc />
+    public override void Initialize()
+    {
+        //Reset original password.
+        _password = Settings.Password;
+        _serializedPassword = null;
+        Settings.Password = null;
+    }
+
+    public override Task InitializeAsync() { Initialize(); return Task.CompletedTask; }
+
+    [Inject]
+    public IAmiCryptoService CryptoService { get; set; } = default!;
+
+    /// <inheritdoc />
+    public override async Task<bool> SaveAsync()
+    {
+        Logger.LogInformation("Saving SMTP configuration.");
+        if (!string.IsNullOrEmpty(Settings.Password) && Settings.Password != _serializedPassword)
+        {
+            _password = Convert.ToBase64String(await CryptoService.EncryptAsync(Settings.Password));
+        }
+        Settings.Password = _password;
+        _serializedPassword = _password;
+        return true;
+    }
+}
+
+
+

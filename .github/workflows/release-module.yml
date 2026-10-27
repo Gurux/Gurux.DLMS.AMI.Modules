@@ -1,0 +1,102 @@
+name: Release AMI module
+
+on:
+  push:
+    tags: ['Gurux.AMI.*/v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing module tag to publish or retry
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: module-release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.tag || github.ref_name }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Check runner configuration
+        run: |
+          $ErrorActionPreference = 'Stop'
+          foreach ($tool in @('git', 'python', 'gh')) { Get-Command $tool -ErrorAction Stop | Out-Null }
+      - name: Test release preparation
+        run: |
+          python -m unittest discover -s tests -v
+          if ($LASTEXITCODE -ne 0) { throw 'Release preparation tests failed' }
+      - name: Test SMTP behavior and package metadata
+        run: |
+          dotnet test tests/Smtp.Tests/Smtp.Tests.csproj --configuration Release -p:RestoreLockedMode=true '-warnaserror:CA1416,CS1591'
+          if ($LASTEXITCODE -ne 0) { throw 'SMTP behavioral tests failed' }
+          dotnet test tests/ModuleMetadata.Tests/ModuleMetadata.Tests.csproj --configuration Release
+          if ($LASTEXITCODE -ne 0) { throw 'Module metadata tests failed' }
+      - name: Prepare module and commit changelog
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python scripts/prepare_release.py --tag $env:RELEASE_TAG --output release
+          if ($LASTEXITCODE -ne 0) { throw 'Release preparation failed' }
+      - name: Check whether release is already published
+        id: state
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $release = Get-Content release/release.json -Raw | ConvertFrom-Json
+          $existing = gh release view $release.tag --repo $env:GITHUB_REPOSITORY --json isDraft,assets 2>$null
+          $published = $false
+          if ($LASTEXITCODE -eq 0) {
+            $existing = $existing | ConvertFrom-Json
+            $published = -not $existing.isDraft
+            if ($published -and $release.package -notin $existing.assets.name) { throw 'Published release is missing its module ZIP' }
+            if ($published -and $release.compatibilityAsset -notin $existing.assets.name) { throw 'Published release is missing its compatibility metadata' }
+          }
+          "published=$($published.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+          # A missing release is normal on the first run.
+          exit 0
+      - name: Build module ZIP
+        if: steps.state.outputs.published != 'true'
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Get-Command dotnet -ErrorAction Stop | Out-Null
+          $release = Get-Content release/release.json -Raw | ConvertFrom-Json
+          $publishDir = Join-Path $env:RUNNER_TEMP "ami-module-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"
+          dotnet restore $release.project --locked-mode
+          if ($LASTEXITCODE -ne 0) { throw 'Locked NuGet restore failed' }
+          dotnet publish $release.project --configuration Release --no-restore --output $publishDir `
+            "-p:AmiModuleReleaseVersion=$($release.version)" `
+            '-p:GeneratePackageOnBuild=false'
+          if ($LASTEXITCODE -ne 0) { throw 'Module publish failed' }
+          $archive = Join-Path (Split-Path $release.project) "bin/Release/$($release.package)"
+          if (-not (Test-Path -LiteralPath $archive -PathType Leaf)) { throw "ZIP not found: $archive" }
+          Copy-Item -LiteralPath $archive -Destination (Join-Path release $release.package)
+          $metadata = Join-Path $publishDir 'module.compatibility.json'
+          if (-not (Test-Path -LiteralPath $metadata -PathType Leaf)) { throw 'Module compatibility metadata not found' }
+          Copy-Item -LiteralPath $metadata -Destination (Join-Path release $release.compatibilityAsset)
+      - name: Publish release and notify Catalog
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CATALOG_TOKEN: ${{ secrets.CATALOG_DISPATCH_TOKEN }}
+        run: ./scripts/publish_release.ps1

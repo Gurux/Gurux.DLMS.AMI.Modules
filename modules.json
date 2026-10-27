@@ -1,0 +1,14 @@
+{
+  "modules": {
+    "Gurux.AMI.SMTP": {
+      "project": "Gurux.AMI.SMTP/Gurux.AMI.SMTP.csproj",
+      "changelogPaths": [
+        "Gurux.AMI.SMTP",
+        "Directory.Build.props",
+        "Directory.Build.targets",
+        "NuGet.Config",
+        "scripts/Gurux.AMI.Module.Metadata"
+      ]
+    }
+  }
+}

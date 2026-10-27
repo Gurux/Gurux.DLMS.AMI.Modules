@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" fill="none" role="img" aria-labelledby="title">
+  <title id="title">Gurux AMI SMTP — Send email</title>
+  <path d="M5 9h16a3 3 0 0 1 3 3v13a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V12a3 3 0 0 1 3-3Z" fill="#1976D2"/>
+  <path d="m4 12 9 7 9-7M4 25l6-6m12 6-6-6" stroke="#FFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m19 13 10-10m-8 0h8v8" stroke="#FFF" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m19 13 10-10m-8 0h8v8" stroke="#1976D2" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -31,7 +31,6 @@
 //---------------------------------------------------------------------------
 *@
 @page "/module/smtp/config"
-@using Microsoft.Extensions.DependencyInjection
 @using Gurux.UI.Components
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Forms
@@ -46,10 +45,10 @@
 @using System.Text.Json
 @using System.Text
 
-@inject IServiceProvider Services
 @inject HttpClient Http
 @inject Gurux.UI.Components.IGXProgress Progress
 @inject ILogger<Configuration> Logger
+@inject IGXNotificationService Notifications
 
 @inherits GXAMIModuleSettingsBase<SmtpOptions>
 @implements IDisposable
@@ -121,7 +120,6 @@
         set => Settings.Password = value;
     }
     private bool _sending;
-    private IGXNotificationService? Notifications => Services.GetService<IGXNotificationService>();
     private string? _testResult;
 
     /// <summary>
@@ -135,7 +133,7 @@
         }
         _sending = true;
         _testResult = null;
-        Notifications?.RemoveByKey("Modules/SMTP/Test");
+        Notifications.RemoveByKey("Modules/SMTP/Test");
         using var progressScope = Progress.ProgressStart(Properties.Resources.SendTestEmail);
         using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token, progressScope.CancellationToken);
         try
@@ -181,7 +179,7 @@
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error while sending test email.");
-            Notifications?.ReportError(ex, "Modules/SMTP/Test");
+            Notifications.ReportError(ex, "Modules/SMTP/Test");
         }
         finally { _sending = false; }
     }

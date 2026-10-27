@@ -35,10 +35,10 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Gurux.UI.Components" Version="[4.0.2610.2701]" />
-        <PackageReference Include="Gurux.DLMS.AMI.Module" Version="[4.1.2610.2703]" />
-        <PackageReference Include="Gurux.DLMS.AMI.Services" Version="[4.1.2610.2701]" />
-        <PackageReference Include="Gurux.DLMS.AMI.Shared" Version="[4.1.2610.2702]" />
+        <PackageReference Include="Gurux.UI.Components" Version="4.0.2610.2702" />
+        <PackageReference Include="Gurux.DLMS.AMI.Module" Version="4.1.2610.2703" />
+        <PackageReference Include="Gurux.DLMS.AMI.Services" Version="4.1.2610.2701" />
+        <PackageReference Include="Gurux.DLMS.AMI.Shared" Version="4.1.2610.2702" />
     </ItemGroup>
 
     <ItemGroup>

@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
+<Project Sdk="Microsoft.NET.Sdk.Razor">
 
     <PropertyGroup>
         <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
@@ -29,6 +29,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="Gurux.DLMS.AMI.Http" Version="4.1.2610.3001" />
         <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.14" />
         <PackageReference Include="Microsoft.AspNetCore.Http" Version="2.3.13" />
         <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.14" />
@@ -36,9 +37,8 @@
 
     <ItemGroup>
         <PackageReference Include="Gurux.UI.Components" Version="4.0.2610.2702" />
-        <PackageReference Include="Gurux.DLMS.AMI.Module" Version="4.1.2610.2703" />
+        <PackageReference Include="Gurux.DLMS.AMI.Module" Version="4.1.2610.3001" />
         <PackageReference Include="Gurux.DLMS.AMI.Services" Version="4.1.2610.2701" />
-        <PackageReference Include="Gurux.DLMS.AMI.Shared" Version="4.1.2610.2702" />
     </ItemGroup>
 
     <ItemGroup>

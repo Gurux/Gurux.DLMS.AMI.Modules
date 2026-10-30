@@ -30,13 +30,17 @@ The module builds with .NET 10 and NuGet dependencies. GitHub Actions publishes 
 
 Module ZIP packages are available in the [repository releases](https://github.com/Gurux/Gurux.DLMS.AMI.Modules/releases) and listed in [Gurux AMI Catalog](https://github.com/Gurux/Gurux.AMI.Catalog).
 
-SMTP releases use tags such as `Gurux.AMI.SMTP/v1.2.0`. See the [repository README](../README.md) for build and publishing instructions.
+SMTP releases use calendar tags such as `Gurux.AMI.SMTP/v1.0.2610.2801`. See the [repository README](../README.md) for build and publishing instructions.
 
 ## Compatibility
 
 Each ZIP includes `module.compatibility.json`, generated from the compiled module and its bundled dependencies. It declares .NET 10 and the exact host DLL versions required by this build. The release also includes `<id>-<version>.compatibility.json`, which Catalog reads before offering the update.
 
 AMI's existing assembly compatibility check can block installation when these requirements do not match the host. Requirements are binary DLL versions, not a guessed minimum AMI product version.
+
+The maintainer can additionally declare tested AMI product versions through the
+`AmiModuleAmiVersionRange` project property. It is published as **Works with AMI**,
+separately from the module's own calendar version. No tested range is assumed by default.
 
 ## Tests
 

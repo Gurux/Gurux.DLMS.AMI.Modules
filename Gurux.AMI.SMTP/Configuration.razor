@@ -37,7 +37,7 @@
 @using Microsoft.AspNetCore.Components.Web
 @using Microsoft.AspNetCore.Components.WebAssembly.Authentication
 @using Gurux.DLMS.AMI.Module
-@using Gurux.DLMS.AMI.Shared
+@using Gurux.DLMS.AMI.Http
 @using Microsoft.Extensions.Logging
 @using System.Net.Mail
 @using Microsoft.Extensions.Options
@@ -165,7 +165,7 @@
                 }
             };
             using var response = await Http.PostAsJsonAsync("api/extensions/Gurux.AMI.SMTP/test", msg, cancellation.Token);
-            await Helpers.ValidateStatusCode(response, cancellation.Token);
+            await response.EnsureSuccessAsync(cancellation.Token);
             cancellation.Token.ThrowIfCancellationRequested();
             _testResult = "Test email sent.";
         }

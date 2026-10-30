@@ -2,11 +2,17 @@
   "version": 1,
   "dependencies": {
     "net10.0": {
+      "Gurux.DLMS.AMI.Http": {
+        "type": "Direct",
+        "requested": "[4.1.2610.3001, )",
+        "resolved": "4.1.2610.3001",
+        "contentHash": "JkxUAEyW35/1qTx1H26ast/r6QcmwG1WdGOdCdyYXXPZG8nQApqkXl6eBiGoRp/FEynSPxTtW1+TaMNg4fKgkQ=="
+      },
       "Gurux.DLMS.AMI.Module": {
         "type": "Direct",
-        "requested": "[4.1.2610.2703, )",
-        "resolved": "4.1.2610.2703",
-        "contentHash": "IsMHd+9jTqc8zwdiPDJebfZnVMsLsa3rEwFDEoODMS4l61OvEKHnCqiRMO6J059gnT3hhIqCIeVpLzF3s/XIFA==",
+        "requested": "[4.1.2610.3001, )",
+        "resolved": "4.1.2610.3001",
+        "contentHash": "aPRtwb/w5fz0QXpymIHA6rWzfoHNNLwf1EBfDwHqnXnVI9Fs9pNZ8HTQEJIuxuqwjboHiFfn1Fuhe0QrhP0gig==",
         "dependencies": {
           "Microsoft.AspNetCore.Authorization": "10.0.14",
           "Microsoft.AspNetCore.Components.Web": "10.0.14",
@@ -21,16 +27,6 @@
         "requested": "[4.1.2610.2701, )",
         "resolved": "4.1.2610.2701",
         "contentHash": "mW+Zrj6pKusm22lkbxF4aWdwuedF5TdGm48BuA6MKvLSMq3qpEfBvmTjWBumHKG91Q3bjmH2dXNuILD3EV3ZZA=="
-      },
-      "Gurux.DLMS.AMI.Shared": {
-        "type": "Direct",
-        "requested": "[4.1.2610.2702, )",
-        "resolved": "4.1.2610.2702",
-        "contentHash": "c/hYiXNvsIio8/E7rhkK2306AQYccM6rVdPbGfz2g1jphSB0OTsx7+mfddHhA7DRCr3Ub7Qg7gCQBBiz9VADpA==",
-        "dependencies": {
-          "Gurux.Service.Common": "3.0.2610.2601",
-          "Microsoft.AspNetCore.Authorization": "10.0.14"
-        }
       },
       "Gurux.UI.Components": {
         "type": "Direct",
@@ -81,11 +77,6 @@
           "Microsoft.Extensions.Options": "10.0.14",
           "Microsoft.Extensions.Primitives": "10.0.14"
         }
-      },
-      "Gurux.Service.Common": {
-        "type": "Transitive",
-        "resolved": "3.0.2610.2601",
-        "contentHash": "YPqWkXl7WunV3cdIvSk4KjwsB29eG/8FO1VYO50CbAzNZZNe9dBHjUKQumNDp87h6N+bfiP1ybTMMOKwxNHxgg=="
       },
       "Microsoft.AspNetCore.Authorization": {
         "type": "Transitive",
